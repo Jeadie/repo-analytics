@@ -34,7 +34,7 @@ var (
 			repo = args[1]
 
 			var starrers []*github.Stargazer
-			opts := &github.ListOptions{PerPage: 50}
+			opts := &github.ListOptions{PerPage: 100}
 
 			for {
 				stargazers, resp, err := client.Activity.ListStargazers(context.TODO(), owner, repo, opts)
