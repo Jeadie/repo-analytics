@@ -8,6 +8,8 @@ import (
 	"os"
 )
 
+const GITHUB_NO_REPLY = "noreply@github.com"
+
 // Return all repositories for a user
 func UserRepos(userLogin string) ([]*github.Repository, error) {
 	var repositories []*github.Repository
@@ -17,6 +19,7 @@ func UserRepos(userLogin string) ([]*github.Repository, error) {
 		Affiliation: "owner",
 		Sort:        "updated",
 		Direction:   "desc",
+		Type:        "owner",
 	}
 
 	for {
@@ -40,7 +43,7 @@ func RepoCommitAuthors(repo *github.Repository) []string {
 	}
 	var commits []*github.RepositoryCommit
 	for {
-		c, resp, err := client.Repositories.ListCommits(context.TODO(), *repo.Owner.Login, *repo.Name, opts)
+		c, resp, err := client.Repositories.ListCommits(context.TODO(), repo.Owner.GetLogin(), repo.GetName(), opts)
 		if err != nil {
 			return []string{}
 		}
@@ -51,10 +54,15 @@ func RepoCommitAuthors(repo *github.Repository) []string {
 		opts.Page = resp.NextPage
 	}
 	emails := make([]string, len(commits))
-	for i, c := range commits {
-		emails[i] = c.GetAuthor().GetEmail()
+	i := 0
+	for _, c := range commits {
+		email := c.GetCommit().GetCommitter().GetEmail()
+		if email != GITHUB_NO_REPLY {
+			emails[i] = c.GetCommit().GetCommitter().GetEmail()
+			i++
+		}
 	}
-	return emails
+	return emails[:i]
 }
 
 // Find statistical mode from list.
