@@ -1,12 +1,9 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"github.com/google/go-github/v48/github"
 	"github.com/spf13/cobra"
-	"golang.org/x/oauth2"
-	"net/http"
 	"os"
 )
 
@@ -33,14 +30,7 @@ var (
 )
 
 func init() {
-	token, exists := os.LookupEnv("GITHUB_TOKEN")
-	var httpC *http.Client
-	if exists {
-		httpC = oauth2.NewClient(context.TODO(), oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: token},
-		))
-	}
-	client = github.NewClient(httpC)
+	client = ConstructGithubClient("GITHUB_TOKEN")
 }
 
 func Execute() {
