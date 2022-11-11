@@ -10,5 +10,5 @@ export GITHUB_TOKEN="...
 ## Get emails of all stargazers
 For a given repository, say [Jeadie/repo-analytics](https://github.com/Jeadie/repo-analytics)
 ```bash
- ./stars.sh Jeadie/repo-analytics | xargs -I% -P0 ./user_email.sh %
+ ./stars.sh Jeadie repo-analytics | xargs -I% -P0 ./user_email.sh %
 ```
