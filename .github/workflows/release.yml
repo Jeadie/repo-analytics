@@ -6,7 +6,6 @@ jobs:
   CD-binaries:
     name: Release Go Binary
     runs-on: ubuntu-latest
-    needs: test-code
     strategy:
       matrix:
         goos: [linux, windows, darwin]
