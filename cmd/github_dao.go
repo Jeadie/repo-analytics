@@ -6,9 +6,35 @@ import (
 	"golang.org/x/oauth2"
 	"net/http"
 	"os"
+	"time"
 )
 
 const GITHUB_NO_REPLY = "noreply@github.com"
+
+func isRateLimited(err error) bool {
+	_, ok := err.(*github.RateLimitError)
+	return ok
+}
+
+// ParseRateLimitError and return the time when it is reset, iff the error is a github.RateLimitError.
+func ParseRateLimitError(err error) (time.Time, bool) {
+	if isRateLimited(err) {
+		return err.(*github.RateLimitError).Rate.Reset.Time, true
+	}
+	return time.Time{}, false
+}
+
+// WaitIfRateLimited and return true iff the error is a github.RateLimitError.
+func WaitIfRateLimited(err error) bool {
+	t, isRateLimited := ParseRateLimitError(err)
+	if !isRateLimited {
+		return false
+	}
+	// Sleep until rate limiting expires, + 5 seconds.
+	time.Sleep(time.Now().Sub(t))
+	time.Sleep(5 * time.Second)
+	return true
+}
 
 func ConstructGithubClient(envVariable string) *github.Client {
 	token, exists := os.LookupEnv(envVariable)
@@ -18,7 +44,7 @@ func ConstructGithubClient(envVariable string) *github.Client {
 			&oauth2.Token{AccessToken: token},
 		))
 	}
-	client = github.NewClient(httpC)
+	return github.NewClient(httpC)
 }
 
 func ListStargazers(owner, repo string) ([]*github.Stargazer, error) {
@@ -26,10 +52,15 @@ func ListStargazers(owner, repo string) ([]*github.Stargazer, error) {
 	opts := &github.ListOptions{PerPage: 100}
 
 	for {
-		stargazers, resp, err := client.Activity.ListStargazers(context.TODO(), owner, repo, opts)
+		stargazers, resp, err := RateLimitGithubCall[[]*github.Stargazer](
+			func() ([]*github.Stargazer, *github.Response, error) {
+				return client.Activity.ListStargazers(context.TODO(), owner, repo, opts)
+			},
+		)
 		if err != nil {
 			return []*github.Stargazer{}, err
 		}
+
 		starrers = append(starrers, stargazers...)
 		if resp.NextPage == 0 {
 			break
@@ -52,7 +83,11 @@ func UserRepos(userLogin string) ([]*github.Repository, error) {
 	}
 
 	for {
-		repos, resp, err := client.Repositories.List(context.TODO(), userLogin, opts)
+		repos, resp, err := RateLimitGithubCall[[]*github.Repository](
+			func() ([]*github.Repository, *github.Response, error) {
+				return client.Repositories.List(context.TODO(), userLogin, opts)
+			},
+		)
 		if err != nil {
 			return []*github.Repository{}, err
 		}
@@ -60,6 +95,7 @@ func UserRepos(userLogin string) ([]*github.Repository, error) {
 		if resp.NextPage == 0 {
 			break
 		}
+		break
 		opts.Page = resp.NextPage
 	}
 	return repositories, nil
@@ -72,7 +108,11 @@ func RepoCommitterEmails(repo *github.Repository) ([]string, error) {
 	}
 	var commits []*github.RepositoryCommit
 	for {
-		c, resp, err := client.Repositories.ListCommits(context.TODO(), repo.Owner.GetLogin(), repo.GetName(), opts)
+		c, resp, err := RateLimitGithubCall[[]*github.RepositoryCommit](
+			func() ([]*github.RepositoryCommit, *github.Response, error) {
+				return client.Repositories.ListCommits(context.TODO(), repo.Owner.GetLogin(), repo.GetName(), opts)
+			},
+		)
 		if err != nil {
 			return []string{}, err
 		}
