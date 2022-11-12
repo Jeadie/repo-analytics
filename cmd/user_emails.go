@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"os"
+	"time"
 )
 
 var (
@@ -23,12 +24,13 @@ var (
 				fmt.Fprintf(os.Stderr, "Could not get repositories of user %s. Error: %s\n", user, err.Error())
 				return
 			}
-
 			var authorEmailCount []string
 
 			// Get all emails associated to all repositories from a user
 			for _, r := range repos {
-				emails, _ := RepoCommitterEmails(r)
+				t := time.Now().UTC()
+				t = time.Date(t.Year()-1, t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
+				emails, _ := RepoCommitterEmails(r, nil, t)
 				authorEmailCount = append(authorEmailCount, emails...)
 			}
 

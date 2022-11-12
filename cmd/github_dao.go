@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+type GithubListFilter[T any] func(T) bool
+
 const GITHUB_NO_REPLY = "noreply@github.com"
 
 func isRateLimited(err error) bool {
@@ -75,7 +77,7 @@ func UserRepos(userLogin string) ([]*github.Repository, error) {
 	var repositories []*github.Repository
 
 	opts := &github.RepositoryListOptions{
-		ListOptions: github.ListOptions{PerPage: 10},
+		ListOptions: github.ListOptions{PerPage: 100},
 		Affiliation: "owner",
 		Sort:        "updated",
 		Direction:   "desc",
@@ -95,16 +97,16 @@ func UserRepos(userLogin string) ([]*github.Repository, error) {
 		if resp.NextPage == 0 {
 			break
 		}
-		break
 		opts.Page = resp.NextPage
 	}
 	return repositories, nil
 }
 
 // RepoCommitterEmails return the emails associated to all commits on a repository
-func RepoCommitterEmails(repo *github.Repository) ([]string, error) {
+func RepoCommitterEmails(repo *github.Repository, commitFilter GithubListFilter[github.RepositoryCommit], since time.Time) ([]string, error) {
 	opts := &github.CommitsListOptions{
 		ListOptions: github.ListOptions{PerPage: 100},
+		Since:       since,
 	}
 	var commits []*github.RepositoryCommit
 	for {
@@ -122,14 +124,18 @@ func RepoCommitterEmails(repo *github.Repository) ([]string, error) {
 		}
 		opts.Page = resp.NextPage
 	}
+	return GetAuthorEmailsFromCommits(commits, commitFilter), nil
+}
+
+func GetAuthorEmailsFromCommits(commits []*github.RepositoryCommit, commitFilter GithubListFilter[github.RepositoryCommit]) []string {
 	emails := make([]string, len(commits))
 	i := 0
 	for _, c := range commits {
 		email := c.GetCommit().GetCommitter().GetEmail()
-		if email != GITHUB_NO_REPLY {
+		if email != GITHUB_NO_REPLY && (commitFilter == nil || commitFilter(*c)) {
 			emails[i] = c.GetCommit().GetCommitter().GetEmail()
 			i++
 		}
 	}
-	return emails[:i], nil
+	return emails[:i]
 }
