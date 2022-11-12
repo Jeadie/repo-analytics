@@ -21,9 +21,10 @@ var (
 	owner       string
 	repo        string
 	starrersCmd = &cobra.Command{
-		Use:   "starrers",
+		Use:   "starrers [flags] [owner] [repo]",
 		Short: "Get all stargazers from a Github repository",
 		Long:  `Get all stargazers from a Github repository`,
+		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) < 2 {
 				fmt.Fprintf(os.Stderr, "Did not provide owner and repo as argv")

@@ -10,9 +10,10 @@ import (
 var (
 	user          string
 	userEmailsCmd = &cobra.Command{
-		Use:   "user-emails",
+		Use:   "user-emails  [flags] [owner] [repo]",
 		Short: "Get the email address of a Github user",
 		Long:  `Get the email address of a Github user`,
+		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) < 1 {
 				fmt.Fprintf(os.Stderr, "Expected user as first argv")
