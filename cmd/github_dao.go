@@ -14,19 +14,26 @@ type GithubListFilter[T any] func(T) bool
 const GITHUB_NO_REPLY = "noreply@github.com"
 
 func isRateLimited(err error) bool {
-	_, ok := err.(*github.RateLimitError)
-	return ok
+	_, isRateLimitError := err.(*github.RateLimitError)
+	return isRateLimitError
 }
 
-// ParseRateLimitError and return the time when it is reset, iff the error is a github.RateLimitError.
+func isRateAbuseLimited(err error) bool {
+	_, isAbuseRateLimitError := err.(*github.AbuseRateLimitError)
+	return isAbuseRateLimitError
+}
+
+// ParseRateLimitError and return the time when it is reset, iff the error is a github.RateLimitError or github.AbuseRateLimitError.
 func ParseRateLimitError(err error) (time.Time, bool) {
 	if isRateLimited(err) {
 		return err.(*github.RateLimitError).Rate.Reset.Time, true
+	} else if isRateAbuseLimited(err) {
+		return time.Now().UTC().Add(err.(*github.AbuseRateLimitError).GetRetryAfter() + time.Second), true
 	}
 	return time.Time{}, false
 }
 
-// WaitIfRateLimited and return true iff the error is a github.RateLimitError.
+// WaitIfRateLimited and return true iff the error is a github.RateLimitError or github.AbuseRateLimitError.
 func WaitIfRateLimited(err error) bool {
 	t, isRateLimited := ParseRateLimitError(err)
 	if !isRateLimited {
