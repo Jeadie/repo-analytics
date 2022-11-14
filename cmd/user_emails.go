@@ -20,6 +20,11 @@ var (
 				return
 			}
 			user = args[0]
+			email, exists := GetUserEmail(user)
+			if exists {
+				fmt.Printf("%s,%s\n", user, email)
+				return
+			}
 			repos, err := UserRepos(user)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Could not get repositories of user %s. Error: %s\n", user, err.Error())

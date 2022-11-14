@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"github.com/google/go-github/v48/github"
 	"golang.org/x/oauth2"
 	"net/http"
@@ -145,4 +146,21 @@ func GetAuthorEmailsFromCommits(commits []*github.RepositoryCommit, commitFilter
 		}
 	}
 	return emails[:i]
+}
+
+func GetUserEmail(userLogin string) (string, bool) {
+	user, _, err := RateLimitGithubCall[*github.User](
+		func() (*github.User, *github.Response, error) {
+			return client.Users.Get(context.TODO(), userLogin)
+		},
+	)
+	if err != nil {
+		fmt.Printf("Cannot get user object for %s. Error: %s\n", userLogin, err.Error())
+		return "", false
+	}
+	email := user.GetEmail()
+	if len(email) == 0 {
+		return "", false
+	}
+	return email, true
 }
