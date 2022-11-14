@@ -3,13 +3,16 @@ package cmd
 import (
 	"fmt"
 	"github.com/spf13/cobra"
+	"math"
 	"os"
 	"time"
 )
 
 var (
-	user          string
-	userEmailsCmd = &cobra.Command{
+	user              string
+	maxRepos          uint
+	maxCommitsPerRepo uint
+	userEmailsCmd     = &cobra.Command{
 		Use:   "user-emails  [flags] [owner] [repo]",
 		Short: "Get the email address of a Github user",
 		Long:  `Get the email address of a Github user`,
@@ -25,7 +28,7 @@ var (
 				fmt.Printf("%s,%s\n", user, email)
 				return
 			}
-			repos, err := UserRepos(user)
+			repos, err := UserRepos(user, maxRepos)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Could not get repositories of user %s. Error: %s\n", user, err.Error())
 				return
@@ -36,7 +39,7 @@ var (
 			for _, r := range repos {
 				t := time.Now().UTC()
 				t = time.Date(t.Year()-1, t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
-				emails, _ := RepoCommitterEmails(r, nil, t)
+				emails, _ := RepoCommitterEmails(r, maxCommitsPerRepo, nil, t)
 				authorEmailCount = append(authorEmailCount, emails...)
 			}
 
@@ -48,4 +51,6 @@ var (
 
 func init() {
 	rootCmd.AddCommand(userEmailsCmd)
+	userEmailsCmd.LocalFlags().UintVar(&maxRepos, "max-repos", math.MaxUint, "")
+	userEmailsCmd.LocalFlags().UintVar(&maxCommitsPerRepo, "max-commits-per-repo", math.MaxUint, "")
 }

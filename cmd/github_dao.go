@@ -81,7 +81,7 @@ func ListStargazers(owner, repo string) ([]*github.Stargazer, error) {
 }
 
 // UserRepos returns all repositories for a user
-func UserRepos(userLogin string) ([]*github.Repository, error) {
+func UserRepos(userLogin string, maxRepos uint) ([]*github.Repository, error) {
 	var repositories []*github.Repository
 
 	opts := &github.RepositoryListOptions{
@@ -102,7 +102,7 @@ func UserRepos(userLogin string) ([]*github.Repository, error) {
 			return []*github.Repository{}, err
 		}
 		repositories = append(repositories, repos...)
-		if resp.NextPage == 0 {
+		if resp.NextPage == 0 || uint(len(repos)) > maxRepos {
 			break
 		}
 		opts.Page = resp.NextPage
@@ -111,7 +111,7 @@ func UserRepos(userLogin string) ([]*github.Repository, error) {
 }
 
 // RepoCommitterEmails return the emails associated to all commits on a repository
-func RepoCommitterEmails(repo *github.Repository, commitFilter GithubListFilter[github.RepositoryCommit], since time.Time) ([]string, error) {
+func RepoCommitterEmails(repo *github.Repository, maxCommitsPerRepo uint, commitFilter GithubListFilter[github.RepositoryCommit], since time.Time) ([]string, error) {
 	opts := &github.CommitsListOptions{
 		ListOptions: github.ListOptions{PerPage: 100},
 		Since:       since,
@@ -127,7 +127,7 @@ func RepoCommitterEmails(repo *github.Repository, commitFilter GithubListFilter[
 			return []string{}, err
 		}
 		commits = append(commits, c...)
-		if resp.NextPage == 0 {
+		if resp.NextPage == 0 || uint(len(commits)) > maxCommitsPerRepo {
 			break
 		}
 		opts.Page = resp.NextPage
