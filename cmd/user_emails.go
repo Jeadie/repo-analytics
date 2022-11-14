@@ -13,10 +13,11 @@ var (
 	maxRepos          uint
 	maxCommitsPerRepo uint
 	userEmailsCmd     = &cobra.Command{
-		Use:   "user-emails  [flags] [owner] [repo]",
-		Short: "Get the email address of a Github user",
-		Long:  `Get the email address of a Github user`,
-		Args:  cobra.ExactArgs(1),
+		Use:              "user-emails [flags] [user]",
+		Short:            "Get the email address of a Github user",
+		Long:             `Get the email address of a Github user`,
+		TraverseChildren: true,
+		Args:             cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) < 1 {
 				fmt.Fprintf(os.Stderr, "Expected user as first argv")
@@ -34,7 +35,6 @@ var (
 				return
 			}
 			var authorEmailCount []string
-
 			// Get all emails associated to all repositories from a user
 			for _, r := range repos {
 				t := time.Now().UTC()
@@ -50,7 +50,7 @@ var (
 )
 
 func init() {
+	userEmailsCmd.Flags().UintVar(&maxRepos, "max-repos", math.MaxUint, "")
+	userEmailsCmd.Flags().UintVar(&maxCommitsPerRepo, "max-commits-per-repo", math.MaxUint, "")
 	rootCmd.AddCommand(userEmailsCmd)
-	userEmailsCmd.LocalFlags().UintVar(&maxRepos, "max-repos", math.MaxUint, "")
-	userEmailsCmd.LocalFlags().UintVar(&maxCommitsPerRepo, "max-commits-per-repo", math.MaxUint, "")
 }
