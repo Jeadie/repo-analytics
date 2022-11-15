@@ -10,6 +10,9 @@ import (
 	"time"
 )
 
+type Email string
+type RepoName string
+
 var (
 	user              string
 	maxRepos          uint
@@ -33,7 +36,7 @@ var (
 				log.Debug().Str("email", email).Str("email-from", "user profile").Send()
 				//return
 			}
-			repos, err := UserRepos(user, maxRepos)
+			repos, err := UserRepos(user, maxRepos, false)
 			log.Debug().Str("user", user).Str("repos", reduce[*github.Repository, string](repos, "", func(r *github.Repository, k string) string {
 				return fmt.Sprintf("%s,%s", k, r.GetFullName())
 			})).Msg("repos from user")
@@ -41,20 +44,57 @@ var (
 				fmt.Fprintf(os.Stderr, "Could not get repositories of user %s. Error: %s\n", user, err.Error())
 				return
 			}
-			var authorEmailCount []string
+			var authorEmailCount []Email
+			emailsPerRepo := make(map[RepoName][]Email, 0)
+
 			// Get all emails associated to all repositories from a user
 			for _, r := range repos {
-				t := time.Now().UTC()
-				t = time.Date(t.Year()-1, t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
-				emails, _ := RepoCommitterEmails(r, maxCommitsPerRepo, nil, t)
-				authorEmailCount = append(authorEmailCount, emails...)
-			}
+				emails, _ := RepoCommitterEmails(r, maxCommitsPerRepo, nil, time.UnixMicro(0))
 
-			fmt.Printf("%s,%s\n", user, mode(authorEmailCount))
-			log.Debug().Str("email", email).Str("email-from", "repositories").Send()
+				authorEmailCount = append(authorEmailCount, emails...)
+				emailsPerRepo[RepoName(r.GetFullName())] = uniq[Email](emails)
+			}
+			selectedEmail := computeEmail(authorEmailCount, emailsPerRepo)
+			fmt.Printf("%s,%s\n", user, selectedEmail)
+			log.Debug().Str("email", string(selectedEmail)).Str("email-from", "repositories").Send()
 		},
 	}
 )
+
+func computeEmail(emailsUsed []Email, emailsInRepo map[RepoName][]Email) Email {
+	viableEmails := make(map[Email]uint, 0)
+
+	// If more than one repo, remove emails that are only in one repo.
+	if len(emailsInRepo) > 1 {
+		reposPerEmail := reverseGroupBy[RepoName, Email](emailsInRepo)
+
+		for email, repos := range reposPerEmail {
+			if len(repos) > 1 {
+				viableEmails[email] = 1
+			}
+		}
+	} else {
+		for _, emails := range emailsInRepo {
+			for _, email := range emails {
+				viableEmails[email] = 1
+			}
+		}
+	}
+
+	// Find most commonly used email that is in viable list of candidates.
+	freqs := frequency[Email](emailsUsed)
+	log.Debug().Str("frequency", fmt.Sprint(freqs)).Msg("Frequency of emails in all repos")
+	var maxEmail Email
+	for email, count := range freqs {
+		_, exists := viableEmails[email]
+		if exists {
+			if count > freqs[maxEmail] {
+				maxEmail = email
+			}
+		}
+	}
+	return maxEmail
+}
 
 func init() {
 	userEmailsCmd.Flags().UintVar(&maxRepos, "max-repos", math.MaxUint, "")

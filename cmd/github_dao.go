@@ -83,7 +83,7 @@ func ListStargazers(owner, repo string) ([]*github.Stargazer, error) {
 }
 
 // UserRepos returns all repositories for a user
-func UserRepos(userLogin string, maxRepos uint) ([]*github.Repository, error) {
+func UserRepos(userLogin string, maxRepos uint, includeForked bool) ([]*github.Repository, error) {
 	var repositories []*github.Repository
 
 	opts := &github.RepositoryListOptions{
@@ -111,9 +111,11 @@ func UserRepos(userLogin string, maxRepos uint) ([]*github.Repository, error) {
 	}
 
 	// Remove repos that the user forked.
-	repositories = filter[*github.Repository](repositories, func(x *github.Repository) bool {
-		return !x.GetFork()
-	})
+	if !includeForked {
+		repositories = filter[*github.Repository](repositories, func(x *github.Repository) bool {
+			return !x.GetFork()
+		})
+	}
 
 	// Handle initial request being larger than max.
 	if uint(len(repositories)) > maxRepos {
@@ -123,7 +125,7 @@ func UserRepos(userLogin string, maxRepos uint) ([]*github.Repository, error) {
 }
 
 // RepoCommitterEmails return the emails associated to all commits on a repository
-func RepoCommitterEmails(repo *github.Repository, maxCommitsPerRepo uint, commitFilter GithubListFilter[github.RepositoryCommit], since time.Time) ([]string, error) {
+func RepoCommitterEmails(repo *github.Repository, maxCommitsPerRepo uint, commitFilter GithubListFilter[github.RepositoryCommit], since time.Time) ([]Email, error) {
 	opts := &github.CommitsListOptions{
 		ListOptions: github.ListOptions{PerPage: 100},
 		Since:       since,
@@ -136,7 +138,7 @@ func RepoCommitterEmails(repo *github.Repository, maxCommitsPerRepo uint, commit
 			},
 		)
 		if err != nil {
-			return []string{}, err
+			return []Email{}, err
 		}
 		commits = append(commits, c...)
 		if resp.NextPage == 0 || uint(len(commits)) > maxCommitsPerRepo {
@@ -149,20 +151,24 @@ func RepoCommitterEmails(repo *github.Repository, maxCommitsPerRepo uint, commit
 	if uint(len(commits)) > maxCommitsPerRepo {
 		commits = commits[:maxCommitsPerRepo]
 	}
-	return GetAuthorEmailsFromCommits(commits, commitFilter), nil
+	emails := GetAuthorEmailsFromCommits(commits, commitFilter)
+	log.Debug().Str("emails", fmt.Sprint(frequency[Email](emails))).Str("repo", repo.GetFullName()).Int("commits", len(commits)).Int("emailCommits", len(emails)).Send()
+	return emails, nil
 }
 
-func GetAuthorEmailsFromCommits(commits []*github.RepositoryCommit, commitFilter GithubListFilter[github.RepositoryCommit]) []string {
-	emails := make([]string, len(commits))
-	i := 0
+func GetAuthorEmailsFromCommits(commits []*github.RepositoryCommit, commitFilter GithubListFilter[github.RepositoryCommit]) []Email {
+	emails := make([]Email, 0)
+	//i := 0
 	for _, c := range commits {
-		email := c.GetCommit().GetCommitter().GetEmail()
+		email := Email(c.GetCommit().GetCommitter().GetEmail())
 		if email != GITHUB_NO_REPLY && (commitFilter == nil || commitFilter(*c)) {
-			emails[i] = c.GetCommit().GetCommitter().GetEmail()
-			i++
+			//emails[i] = c.GetCommit().GetCommitter().GetEmail()
+			//i++
+
+			emails = append(emails, email)
 		}
 	}
-	return emails[:i]
+	return emails // [:i]
 }
 
 func GetUserEmail(userLogin string) (string, bool) {
