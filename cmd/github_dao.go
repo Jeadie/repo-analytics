@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/go-github/v48/github"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 	"net/http"
 	"os"
@@ -43,6 +44,7 @@ func WaitIfRateLimited(err error) bool {
 	// Sleep until rate limiting expires, + 5 seconds.
 	time.Sleep(time.Now().Sub(t))
 	time.Sleep(5 * time.Second)
+	log.Debug().Msg("Finished sleep after being rate limited")
 	return true
 }
 
@@ -154,6 +156,7 @@ func GetUserEmail(userLogin string) (string, bool) {
 			return client.Users.Get(context.TODO(), userLogin)
 		},
 	)
+	log.Debug().Interface("gh-raw-user", user).Msg("GET user")
 	if err != nil {
 		fmt.Printf("Cannot get user object for %s. Error: %s\n", userLogin, err.Error())
 		return "", false

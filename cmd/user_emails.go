@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/google/go-github/v48/github"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"math"
 	"os"
@@ -24,12 +26,17 @@ var (
 				return
 			}
 			user = args[0]
+			log.Debug().Str("github-user", user).Msg("User-supplied github user")
 			email, exists := GetUserEmail(user)
 			if exists {
-				fmt.Printf("%s,%s\n", user, email)
-				return
+				//fmt.Printf("%s,%s\n", user, email)
+				log.Debug().Str("email", email).Str("email-from", "user profile").Send()
+				//return
 			}
 			repos, err := UserRepos(user, maxRepos)
+			log.Debug().Str("user", user).Str("repos", reduce[*github.Repository, string](repos, "", func(r *github.Repository, k string) string {
+				return fmt.Sprintf("%s,%s", k, r.GetFullName())
+			})).Msg("repos from user")
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Could not get repositories of user %s. Error: %s\n", user, err.Error())
 				return
@@ -44,7 +51,7 @@ var (
 			}
 
 			fmt.Printf("%s,%s\n", user, mode(authorEmailCount))
-
+			log.Debug().Str("email", email).Str("email-from", "repositories").Send()
 		},
 	}
 )
