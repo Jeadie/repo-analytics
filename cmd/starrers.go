@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/google/go-github/v48/github"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"io"
 	"os"
@@ -32,10 +33,13 @@ var (
 			}
 			owner = args[0]
 			repo = args[1]
+			log.Debug().Str("owner", owner).Str("repo", repo).Send()
 
 			starrers, err := ListStargazers(owner, repo)
+			log.Debug().Int("stars", len(starrers)).Send()
+
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "%s\n", err)
+				log.Err(err).Str("owner", owner).Str("repo", repo).Msg("Failed to get stargazers.")
 				return
 			}
 			outputStargazers(starrers, os.Stdout)
