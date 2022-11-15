@@ -109,6 +109,11 @@ func UserRepos(userLogin string, maxRepos uint) ([]*github.Repository, error) {
 		}
 		opts.Page = resp.NextPage
 	}
+
+	// Handle initial request being larger than max.
+	if uint(len(repositories)) > maxRepos {
+		repositories = repositories[:maxCommitsPerRepo]
+	}
 	return repositories, nil
 }
 
@@ -133,6 +138,11 @@ func RepoCommitterEmails(repo *github.Repository, maxCommitsPerRepo uint, commit
 			break
 		}
 		opts.Page = resp.NextPage
+	}
+
+	// Handle initial request being larger than max.
+	if uint(len(commits)) > maxCommitsPerRepo {
+		commits = commits[:maxCommitsPerRepo]
 	}
 	return GetAuthorEmailsFromCommits(commits, commitFilter), nil
 }
