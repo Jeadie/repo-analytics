@@ -52,7 +52,10 @@ var (
 				emails, _ := RepoCommitterEmails(r, maxCommitsPerRepo, nil, time.UnixMicro(0))
 
 				authorEmailCount = append(authorEmailCount, emails...)
-				emailsPerRepo[RepoName(r.GetFullName())] = uniq[Email](emails)
+				uniqEmails := uniq[Email](emails)
+				if len(uniqEmails) > 0 {
+					emailsPerRepo[RepoName(r.GetFullName())] = uniq[Email](emails)
+				}
 			}
 			selectedEmail := computeEmail(authorEmailCount, emailsPerRepo)
 			fmt.Printf("%s,%s\n", user, selectedEmail)
