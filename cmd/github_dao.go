@@ -110,9 +110,14 @@ func UserRepos(userLogin string, maxRepos uint) ([]*github.Repository, error) {
 		opts.Page = resp.NextPage
 	}
 
+	// Remove repos that the user forked.
+	repositories = filter[*github.Repository](repositories, func(x *github.Repository) bool {
+		return !x.GetFork()
+	})
+
 	// Handle initial request being larger than max.
 	if uint(len(repositories)) > maxRepos {
-		repositories = repositories[:maxCommitsPerRepo]
+		repositories = repositories[:maxRepos]
 	}
 	return repositories, nil
 }
