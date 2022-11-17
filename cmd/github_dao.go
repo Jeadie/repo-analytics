@@ -171,15 +171,24 @@ func GetAuthorEmailsFromCommits(commits []*github.RepositoryCommit, commitFilter
 	return emails // [:i]
 }
 
-func GetUserEmail(userLogin string) (string, bool) {
+func GetUser(userLogin string) (*github.User, error) {
 	user, _, err := RateLimitGithubCall[*github.User](
 		func() (*github.User, *github.Response, error) {
 			return client.Users.Get(context.TODO(), userLogin)
 		},
 	)
-	log.Debug().Interface("gh-raw-user", user).Msg("GET user")
 	if err != nil {
 		log.Error().Err(err).Str("username", userLogin).Msg("Cannot get user object")
+	} else {
+		log.Debug().Interface("gh-raw-user", user).Msg("GET user")
+	}
+	return user, err
+}
+
+func GetUserEmail(userLogin string) (string, bool) {
+	user, err := GetUser(userLogin)
+	log.Debug().Str("gh-user", user.GetName()).Msg("GET user")
+	if err != nil {
 		return "", false
 	}
 	email := user.GetEmail()
