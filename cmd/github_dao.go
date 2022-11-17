@@ -179,7 +179,7 @@ func GetUserEmail(userLogin string) (string, bool) {
 	)
 	log.Debug().Interface("gh-raw-user", user).Msg("GET user")
 	if err != nil {
-		fmt.Printf("Cannot get user object for %s. Error: %s\n", userLogin, err.Error())
+		log.Error().Err(err).Str("username", userLogin).Msg("Cannot get user object")
 		return "", false
 	}
 	email := user.GetEmail()

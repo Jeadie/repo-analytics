@@ -13,7 +13,7 @@ func outputStargazers(gazers []*github.Stargazer, fp io.Writer) {
 	for _, g := range gazers {
 		_, err := fmt.Fprintf(fp, "%s\n", *g.User.Login)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to output stargazer details, %s\n", err.Error())
+			log.Error().Err(err).Str("stargazer", g.GetUser().GetLogin()).Msg("Failed to output stargazer details")
 		}
 	}
 }
@@ -28,7 +28,7 @@ var (
 		Args:  cobra.ExactArgs(2),
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) < 2 {
-				fmt.Fprintf(os.Stderr, "Did not provide owner and repo as argv")
+				log.Error().Err(fmt.Errorf("did not provide owner and repo as argv"))
 				return
 			}
 			owner = args[0]

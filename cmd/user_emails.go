@@ -6,7 +6,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"math"
-	"os"
 	"time"
 )
 
@@ -25,23 +24,22 @@ var (
 		Args:             cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) < 1 {
-				fmt.Fprintf(os.Stderr, "Expected user as first argv")
+				log.Error().Err(fmt.Errorf("expected user as first argv"))
 				return
 			}
 			user = args[0]
 			log.Debug().Str("github-user", user).Msg("User-supplied github user")
 			email, exists := GetUserEmail(user)
 			if exists {
-				//fmt.Printf("%s,%s\n", user, email)
 				log.Debug().Str("email", email).Str("email-from", "user profile").Send()
-				//return
+				return
 			}
 			repos, err := UserRepos(user, maxRepos, false)
 			log.Debug().Str("user", user).Str("repos", reduce[*github.Repository, string](repos, "", func(r *github.Repository, k string) string {
 				return fmt.Sprintf("%s,%s", k, r.GetFullName())
 			})).Msg("repos from user")
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Could not get repositories of user %s. Error: %s\n", user, err.Error())
+				log.Error().Err(err).Msg(fmt.Sprintf("Could not get repositories of user %s", user))
 				return
 			}
 			var authorEmailCount []Email
