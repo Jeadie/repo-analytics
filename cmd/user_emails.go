@@ -32,6 +32,7 @@ var (
 			email := userBody.GetEmail()
 			if len(email) > 0 {
 				log.Debug().Str("email", email).Str("email-from", "user profile").Send()
+				fmt.Printf("%s,%s\n", user, email)
 				return
 			}
 
