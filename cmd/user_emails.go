@@ -34,7 +34,6 @@ var (
 				log.Debug().Str("email", email).Str("email-from", "user profile").Send()
 				return
 			}
-			log.Debug().Str("github-user", user).Str("name", userBody.GetName()).Str("email", userBody.GetEmail()).Msg("GH profile contact details")
 
 			repos, err := UserRepos(user, maxRepos, false)
 			log.Debug().Str("user", user).Str("repos", reduce[*github.Repository, string](repos, "", func(r *github.Repository, k string) string {

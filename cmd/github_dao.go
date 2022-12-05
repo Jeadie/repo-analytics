@@ -182,6 +182,12 @@ func GetUser(userLogin string) (*github.User, error) {
 	} else {
 		log.Debug().Interface("gh-raw-user", user).Msg("GET user")
 	}
+	log.Debug().Str("github_user", userLogin).
+		Interface("body", user).
+		Str("location", user.GetLocation()).
+		Str("name", user.GetName()).
+		Str("email", user.GetEmail()).
+		Msg("GH profile contact details")
 	return user, err
 }
 
